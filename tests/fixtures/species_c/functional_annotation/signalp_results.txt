@@ -1,0 +1,2 @@
+# SignalP-6.0	Organism: Eukarya	Timestamp: none
+# ID	Prediction	OTHER	SP(Sec/SPI)	CS Position

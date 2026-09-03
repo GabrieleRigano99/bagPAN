@@ -1,0 +1,17 @@
+[project]
+name = "bagpan"
+version = "0.1.0"
+description = "Comparative genomics / pangenome analysis for bagRNA annotation outputs, using OrthoFinder orthogroups"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+bagpan = "bagpan.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["bagpan*"]

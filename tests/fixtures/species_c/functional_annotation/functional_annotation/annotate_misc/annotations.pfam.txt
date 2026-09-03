@@ -1,0 +1,1 @@
+SPC_000001-T1	db_xref	PFAM:PF00001

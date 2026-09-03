@@ -1,0 +1,7 @@
+##gff-version 3
+ctg1	bagpan_test	gene	100	400	.	+	.	ID=SPB_000001;
+ctg1	bagpan_test	mRNA	100	400	.	+	.	ID=SPB_000001-T1;Parent=SPB_000001;
+ctg1	bagpan_test	CDS	100	400	.	+	0	ID=SPB_000001-T1.cds;Parent=SPB_000001-T1;
+ctg1	bagpan_test	gene	500	800	.	+	.	ID=SPB_000002;
+ctg1	bagpan_test	mRNA	500	800	.	+	.	ID=SPB_000002-T1;Parent=SPB_000002;
+ctg1	bagpan_test	CDS	500	800	.	+	0	ID=SPB_000002-T1.cds;Parent=SPB_000002-T1;

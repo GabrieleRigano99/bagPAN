@@ -1,0 +1,2 @@
+SPB_000001-T1	db_xref	InterPro:IPR000001
+SPB_000001-T1	go_function	some function|0003700||IEA

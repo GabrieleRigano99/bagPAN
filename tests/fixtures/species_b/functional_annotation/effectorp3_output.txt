@@ -1,0 +1,2 @@
+# Identifier	Cytoplasmic effector	Apoplastic effector	Non-effector	Prediction
+SPB_000001-T1 gene=SPB_000001 seq_id=contig1 type=cds	-	-	Y (0.9)	Non-effector
