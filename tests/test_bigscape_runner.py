@@ -54,10 +54,12 @@ def test_stage_bgc_regions_prefixes_by_species_and_skips_missing(tmp_path):
 
     sf_a = SpeciesFiles(
         name="species_a", root=tmp_path, proteome=tmp_path / "a.fa", locus_prefix="A",
+        functional_annotation_tsv=tmp_path / "a.tsv",
         antismash_regions_dir=species_a_regions,
     )
     sf_b = SpeciesFiles(
         name="species_b", root=tmp_path, proteome=tmp_path / "b.fa", locus_prefix="B",
+        functional_annotation_tsv=tmp_path / "b.tsv",
         antismash_regions_dir=None,
     )
 

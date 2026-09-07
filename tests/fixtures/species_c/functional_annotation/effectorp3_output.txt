@@ -1,2 +1,2 @@
 # Identifier	Cytoplasmic effector	Apoplastic effector	Non-effector	Prediction
-SPC_000002-T1 gene=SPC_000002 seq_id=contig1 type=cds	-	Y (0.812)	-	Apoplastic effector
+SPC_000002-T1 gene=SPC_000002 seq_id=ctg1 type=cds	-	Y (0.812)	-	Apoplastic effector

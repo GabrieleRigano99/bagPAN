@@ -1,2 +1,0 @@
-SPA_000001-T1	name	FOO1
-SPA_000001-T1	product	Foo protein 1

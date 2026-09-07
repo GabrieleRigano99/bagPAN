@@ -1,1 +1,0 @@
-SPA_000001-T1	note	antiSMASH:Cluster_1

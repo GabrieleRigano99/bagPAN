@@ -61,7 +61,10 @@ def test_build_gene_annotation_falls_back_without_gff3(tmp_path, capsys):
 
     proteome = tmp_path / "toy.proteins.fa"
     proteome.write_text(">FOO_0001-T1 desc\nMSEQ\n>FOO_0001-T2 desc\nMSEQ\n")
-    sf = SpeciesFiles(name="toy", root=tmp_path, proteome=proteome, locus_prefix="FOO", gff3=None)
+    sf = SpeciesFiles(
+        name="toy", root=tmp_path, proteome=proteome, locus_prefix="FOO",
+        functional_annotation_tsv=tmp_path / "functional_annotation.tsv", gff3=None,
+    )
     ga = build_gene_annotation(sf)
     assert ga.from_gff3 is False
     assert ga.gene_of["FOO_0001-T1"] == "FOO_0001"

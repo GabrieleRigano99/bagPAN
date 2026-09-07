@@ -110,6 +110,7 @@ def write_functional_categories(
     orthogroup_set: OrthogroupSet,
     species_annotations: Dict[str, SpeciesAnnotations],
     locus_prefix_to_species: Dict[str, str],
+    protein_to_gene: Dict[str, str],
     percent: float,
     classification_method: str = "threshold",
 ) -> Dict[str, Dict[str, tuple]]:
@@ -142,7 +143,9 @@ def write_functional_categories(
             present = orthogroup_set.species_present[cluster]
             n_present = len(present)
             hit_species = {
-                _protein_species(p, locus_prefix_to_species) for p in proteins if p in category_set
+                _protein_species(p, locus_prefix_to_species)
+                for p in proteins
+                if protein_to_gene.get(p, p) in category_set
             }
             fraction = (len(hit_species) / n_present) if n_present else 0.0
             n_present_by_cluster.append(n_present)
@@ -222,7 +225,7 @@ def write_per_protein_annotations(
                 "protein_id", "is_representative_transcript",
                 "gene_product", "pfam_domains", "iprscan_domains", "go_terms",
                 "merops", "cazy", "secondary_metabolite_cluster",
-                "secretome", "transmembrane", "effector", "effector_score",
+                "secretome", "transmembrane", "effector", "effector_class", "effector_score",
             ]
         )
         for cluster, proteins in orthogroup_set.proteins.items():
@@ -231,23 +234,25 @@ def write_per_protein_annotations(
             for protein_id in proteins:
                 species = _protein_species(protein_id, locus_prefix_to_species)
                 sa = species_annotations[species]
-                is_secretome = protein_id in global_sets["secretome"]
-                is_transmembrane = protein_id in global_sets["transmembrane"]
-                is_effector = protein_id in global_sets["effectors"]
-                is_metabolite = protein_id in global_sets["secondary_metabolites"]
-                effector_score = sa.effectors.get(protein_id, "")
+                gene_id = protein_to_gene.get(protein_id, protein_id)
+                is_secretome = gene_id in global_sets["secretome"]
+                is_transmembrane = gene_id in global_sets["transmembrane"]
+                is_effector = gene_id in global_sets["effectors"]
+                is_metabolite = gene_id in global_sets["secondary_metabolites"]
+                effector_score = sa.effector_scores.get(protein_id, "")
                 w.writerow(
                     [
                         cluster, cluster_size, pan_category, species,
-                        protein_to_gene.get(protein_id, protein_id), protein_id,
+                        gene_id, protein_id,
                         "Yes" if protein_id in representative_transcripts else "No",
-                        sa.product_of(protein_id), sa.pfam_of(protein_id),
-                        sa.iprscan_of(protein_id), sa.go_of(protein_id),
-                        sa.merops_of(protein_id), sa.cazy_of(protein_id),
+                        sa.product_of(gene_id), sa.pfam_of(gene_id),
+                        sa.iprscan_of(gene_id), sa.go_of(gene_id),
+                        sa.merops_of(gene_id), sa.cazy_of(gene_id),
                         "Yes" if is_metabolite else "No",
                         "Yes" if is_secretome else "No",
                         "Yes" if is_transmembrane else "No",
                         "Yes" if is_effector else "No",
+                        sa.effector_class_of(gene_id),
                         effector_score,
                     ]
                 )
@@ -317,14 +322,23 @@ def write_go_enrichment(
     orthogroup_set: OrthogroupSet,
     species_annotations: Dict[str, SpeciesAnnotations],
     locus_prefix_to_species: Dict[str, str],
+    protein_to_gene: Dict[str, str],
     percent: float,
     alpha: float,
     go_dag: Optional[go_enrichment.GoDag],
     go_min_count: int,
 ) -> None:
+    # go_enrichment operates per protein id (it doesn't know about genes);
+    # sa.go_terms is gene-keyed (functional_annotation.tsv is gene-level), so
+    # resolve each orthogroup member's gene's GO set back onto its protein id.
     go_by_protein: Dict[str, Set[str]] = {}
-    for sa in species_annotations.values():
-        go_by_protein.update(sa.go_terms)
+    for cluster_proteins in orthogroup_set.proteins.values():
+        for protein_id in cluster_proteins:
+            species = _protein_species(protein_id, locus_prefix_to_species)
+            gene_id = protein_to_gene.get(protein_id, protein_id)
+            terms = species_annotations[species].go_terms.get(gene_id)
+            if terms:
+                go_by_protein[protein_id] = terms
     go_enrichment.run_go_enrichment(
         outdir, orthogroup_set, go_by_protein, locus_prefix_to_species, percent, alpha,
         dag=go_dag, min_population_count=go_min_count,
@@ -365,7 +379,8 @@ def run_report(
         outdir, orthogroup_set, protein_to_gene, locus_prefix_to_species, synteny_supported
     )
     tallies = write_functional_categories(
-        outdir, orthogroup_set, species_annotations, locus_prefix_to_species, percent, classification_method
+        outdir, orthogroup_set, species_annotations, locus_prefix_to_species, protein_to_gene,
+        percent, classification_method,
     )
     write_enrichment_summary(outdir, tallies, alpha)
     write_per_protein_annotations(
@@ -385,7 +400,8 @@ def run_report(
 
     if run_go_enrichment_flag:
         write_go_enrichment(
-            outdir, orthogroup_set, species_annotations, locus_prefix_to_species, percent, alpha, go_dag, go_min_count
+            outdir, orthogroup_set, species_annotations, locus_prefix_to_species, protein_to_gene,
+            percent, alpha, go_dag, go_min_count,
         )
         run_meta["go_enrichment_propagated"] = go_dag is not None
 

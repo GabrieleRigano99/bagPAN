@@ -9,10 +9,12 @@ landscape (Panaroo, PPanGGOLiN, Roary, Pangloss, GET_HOMOLOGUES, BiG-SCAPE).
 Given N completed bagRNA runs (each with finished functional annotation),
 bagPAN:
 
-1. Locates each species' protein FASTA, GFF3, and funannotate-format
-   annotation files (bagRNA's functional-annotation stage wraps funannotate,
-   so these are already in the right shape) and auto-detects each species'
-   locus-tag prefix from its own protein headers.
+1. Locates each species' protein FASTA (`structural_annotation/final_proteins.faa`),
+   gene-level `functional_annotation/functional_annotation.tsv`, and final
+   `functional_annotation/annotated.gff3` (bagRNA's own merge step -
+   `bin/merge_functional_annotations.py` - already aggregates every tool's
+   output there; bagRNA no longer runs `funannotate annotate`), and
+   auto-detects each species' locus-tag prefix from its own protein headers.
 2. Runs OrthoFinder (via Docker) on the collected proteomes, or accepts a
    pre-computed `Orthogroups.txt` with `--skip-orthofinder`. When it runs
    OrthoFinder itself, it also surfaces OrthoFinder's own rooted species tree
@@ -24,13 +26,14 @@ bagPAN:
    members (via the GFF3) actually corroborate the clustering, or does it
    look like a spurious OrthoFinder call? A lightweight heuristic QC signal,
    not a re-clustering - see `bagpan/synteny.py`.
-5. Classifies each protein into functional categories - secretome,
-   transmembrane, predicted effectors (EffectorP3), conserved domains
-   (Pfam/InterPro), CAZymes (dbCAN), MEROPS peptidases, secondary-metabolite
-   cluster members (antiSMASH) - and rolls that up to orthogroup-level hits,
-   via either a fixed `--percent` threshold (default) or an opt-in
-   2-component Gaussian-mixture fit (`--classification-method mixture`, in
-   the spirit of PPanGGOLiN's statistical partitioning).
+5. Classifies each gene into functional categories - secretome,
+   transmembrane, predicted effectors (EffectorP3 class, from
+   `functional_annotation.tsv`), conserved domains (Pfam/InterPro), CAZymes
+   (dbCAN), MEROPS peptidases, secondary-metabolite cluster members
+   (antiSMASH BGC role) - and rolls that up to orthogroup-level hits, via
+   either a fixed `--percent` threshold (default) or an opt-in 2-component
+   Gaussian-mixture fit (`--classification-method mixture`, in the spirit of
+   PPanGGOLiN's statistical partitioning).
 6. Runs a Fisher's exact test (Core vs Accessory vs Singleton, BH-FDR
    corrected) per category, and writes a combined per-protein annotation
    table.
@@ -84,8 +87,24 @@ bagpan run --species ... --outdir results/ --go-obo /path/to/go-basic.obo
 ```
 
 Each `--species` path must be a bagRNA output directory whose
-`functional_annotation/` stage has completed. Running OrthoFinder requires
-Docker (pulls `davidemms/orthofinder`, override with `--orthofinder-image`).
+`functional_annotation/` stage (`ANNOTATE_FUNCTIONAL`) has completed. Running
+OrthoFinder requires Docker (pulls `davidemms/orthofinder`, override with
+`--orthofinder-image`).
+
+### Input layout
+
+Per `--species` bagRNA output directory, bagPAN reads:
+
+| File | Required | Purpose |
+|---|---|---|
+| `structural_annotation/final_proteins.faa` | yes | proteome fed to OrthoFinder; locus-tag prefix auto-detected from its headers |
+| `functional_annotation/functional_annotation.tsv` | yes | gene-level product/GO/EC/KEGG/Pfam/InterPro/CAZy/MEROPS/PHI-base/secretion/TM/effector/BGC annotations (`bin/merge_functional_annotations.py`'s output) |
+| `functional_annotation/annotated.gff3` | no (falls back to a `-Tn`-suffix heuristic) | gene/transcript/CDS structure, for representative-transcript selection and synteny |
+| `functional_annotation/effectorp3_output.txt` | no | supplementary: the one field the merged TSV drops - EffectorP3's numeric probability |
+| `functional_annotation/antismash_output/*.region*.gbk` | no | only used by `--run-bigscape` |
+
+This matches bagRNA's current functional-annotation stage
+(`modules/annotate_functional.nf`), which replaced `funannotate annotate`.
 
 Key flags: `--percent` (threshold-method cutoff, default 0.5),
 `--classification-method {threshold,mixture}`, `--alpha` (BH-FDR alpha),

@@ -1,7 +1,13 @@
 """Locate the proteome and annotation files bagPAN needs inside a completed
 bagRNA output directory, and auto-detect the isolate's locus-tag prefix from
-the proteome's own fasta headers (bagRNA's functional-annotation stage wraps
-funannotate, so these paths follow funannotate's output layout).
+the proteome's own fasta headers.
+
+bagRNA no longer uses `funannotate annotate`; its functional-annotation
+stage is now modules/annotate_functional.nf (bin/merge_functional_annotations.py),
+which merges every tool's output into one gene-level
+`functional_annotation/functional_annotation.tsv` plus a final
+`functional_annotation/annotated.gff3`. The final protein FASTA comes from
+AGAT (`structural_annotation/final_proteins.faa`), not funannotate.
 """
 
 from __future__ import annotations
@@ -21,28 +27,10 @@ class SpeciesFiles:
     root: Path
     proteome: Path
     locus_prefix: str
+    functional_annotation_tsv: Path
     gff3: Optional[Path] = None
     antismash_regions_dir: Optional[Path] = None
-    pfam: Optional[Path] = None
-    iprscan: Optional[Path] = None
-    dbcan: Optional[Path] = None
-    merops: Optional[Path] = None
-    genes_products: Optional[Path] = None
-    antismash: Optional[Path] = None
-    antismash_clusters: Optional[Path] = None
-    phobius: Optional[Path] = None
-    signalp: Optional[Path] = None
     effectorp3: Optional[Path] = None
-
-
-def _first_match(patterns, base: Path) -> Optional[Path]:
-    if not base.is_dir():
-        return None
-    for pattern in patterns:
-        hits = sorted(base.glob(pattern))
-        if hits:
-            return hits[0]
-    return None
 
 
 def _detect_locus_prefix(proteome: Path) -> str:
@@ -68,16 +56,30 @@ def discover_species(name: str, bagrna_outdir: "str | Path") -> SpeciesFiles:
         raise DiscoveryError(f"bagRNA output directory not found: {root}")
 
     func_root = root / "functional_annotation"
-    annotate_results = func_root / "functional_annotation" / "annotate_results"
-    annotate_misc = func_root / "functional_annotation" / "annotate_misc"
+    struct_root = root / "structural_annotation"
 
-    proteome = _first_match(["*.proteins.fa", "*.proteins.faa"], annotate_results)
-    if proteome is None:
+    proteome = struct_root / "final_proteins.faa"
+    if not proteome.is_file():
         raise DiscoveryError(
-            f"No *.proteins.fa found under {annotate_results} for species {name!r}. "
-            "Has functional annotation finished for this run?"
+            f"No final_proteins.faa found at {proteome} for species {name!r}. "
+            "Has structural annotation (AGAT_EXTRACT_PROTEINS) finished for this run?"
         )
     locus_prefix = _detect_locus_prefix(proteome)
+
+    functional_annotation_tsv = func_root / "functional_annotation.tsv"
+    if not functional_annotation_tsv.is_file():
+        raise DiscoveryError(
+            f"No functional_annotation.tsv found at {functional_annotation_tsv} for species "
+            f"{name!r}. Has functional annotation (ANNOTATE_FUNCTIONAL) finished for this run?"
+        )
+
+    gff3 = func_root / "annotated.gff3"
+    if not gff3.is_file():
+        gff3 = None
+
+    effectorp3 = func_root / "effectorp3_output.txt"
+    if not effectorp3.is_file():
+        effectorp3 = None
 
     antismash_regions_dir = func_root / "antismash_output"
     if not antismash_regions_dir.is_dir() or not any(antismash_regions_dir.glob("*.region*.gbk")):
@@ -88,16 +90,8 @@ def discover_species(name: str, bagrna_outdir: "str | Path") -> SpeciesFiles:
         root=root,
         proteome=proteome,
         locus_prefix=locus_prefix,
-        gff3=_first_match(["*.gff3"], annotate_results),
+        functional_annotation_tsv=functional_annotation_tsv,
+        gff3=gff3,
         antismash_regions_dir=antismash_regions_dir,
-        pfam=_first_match(["annotations.pfam.txt"], annotate_misc),
-        iprscan=_first_match(["annotations.iprscan.txt"], annotate_misc),
-        dbcan=_first_match(["annotations.dbCAN.txt", "annotations.dbcan.txt"], annotate_misc),
-        merops=_first_match(["annotations.merops.txt"], annotate_misc),
-        genes_products=_first_match(["annotations.genes-products.txt"], annotate_misc),
-        antismash=_first_match(["annotations.antismash.txt"], annotate_misc),
-        antismash_clusters=_first_match(["annotations.antismash.clusters.txt"], annotate_misc),
-        phobius=_first_match(["phobius_results.txt"], func_root),
-        signalp=_first_match(["signalp_results.txt"], func_root),
-        effectorp3=_first_match(["effectorp3_output.txt"], func_root),
+        effectorp3=effectorp3,
     )

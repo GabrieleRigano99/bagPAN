@@ -1,4 +1,0 @@
-# SignalP-6.0	Organism: Eukarya	Timestamp: none
-# ID	Prediction	OTHER	SP(Sec/SPI)	CS Position
-SPA_000001-T1	SP	0.000001	0.999999	CS pos: 18-19. Pr: 0.9997624
-SPA_000002-T1	SP	0.000001	0.999999	CS pos: 20-21. Pr: 0.999

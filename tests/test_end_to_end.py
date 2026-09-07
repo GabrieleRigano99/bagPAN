@@ -102,8 +102,7 @@ def test_run_end_to_end_with_precomputed_orthogroups(tmp_path):
     cazymes = {row["orthogroup"]: row for row in _read_tsv(cat_dir / "cazymes.tsv")}
     assert cazymes["OG0000003"]["hit"] == "Yes"
 
-    # secondary_metabolites: OG1's protein has a cluster hit AND an smcog hit (after id
-    # cleanup) so it must be excluded - regression check for the antiSMASH id-cleanup bug
+    # secondary_metabolites: no fixture gene has BGC_cluster_type/BGC_gene_role set
     metabolites = {row["orthogroup"]: row for row in _read_tsv(cat_dir / "secondary_metabolites.tsv")}
     assert metabolites["OG0000001"]["hit"] == "No"
 

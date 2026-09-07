@@ -1,4 +1,4 @@
-"""Gene-level structure from a bagRNA/funannotate GFF3: which transcripts
+"""Gene-level structure from bagRNA's final annotated GFF3: which transcripts
 belong to which gene, and which transcript is the "representative" one
 (longest summed CDS) - used to stop isoform/transcript proliferation from
 inflating orthogroup sizes and gene counts (a real bug: a single gene with 3
