@@ -330,6 +330,46 @@ def test_run_accumulation_permutations_zero_skips_curve(tmp_path):
     assert not (outdir / "pangenome_openness.txt").exists()
 
 
+def test_run_with_species_dir(tmp_path):
+    outdir = tmp_path / "out"
+    argv = [
+        "run",
+        "--species-dir", str(FIXTURES),  # species_a/b/c subdirs; Orthogroups.txt (a file) is skipped
+        "--outdir", str(outdir),
+        "--skip-orthofinder",
+        "--orthogroups", str(FIXTURES / "Orthogroups.txt"),
+    ]
+    assert main(argv) == 0
+    manifest = json.loads((outdir / "run_manifest.json").read_text())
+    assert set(manifest["species"]) == {"species_a", "species_b", "species_c"}
+    assert (outdir / "orthogroup_classification.tsv").exists()
+
+
+def test_run_species_dir_and_species_are_mutually_exclusive():
+    import pytest
+
+    from bagpan.cli import main as cli_main
+
+    with pytest.raises(SystemExit):
+        cli_main([
+            "run",
+            "--species", f"species_a={FIXTURES / 'species_a'}",
+            "--species-dir", str(FIXTURES),
+            "--outdir", "/tmp/unused",
+        ])
+
+
+def test_run_species_dir_not_a_directory_errors(tmp_path):
+    argv = [
+        "run",
+        "--species-dir", str(tmp_path / "does_not_exist"),
+        "--outdir", str(tmp_path / "out"),
+        "--skip-orthofinder",
+        "--orthogroups", str(FIXTURES / "Orthogroups.txt"),
+    ]
+    assert main(argv) == 1
+
+
 def test_run_rejects_fewer_than_two_species(tmp_path):
     outdir = tmp_path / "out"
     argv = [

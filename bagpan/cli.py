@@ -42,13 +42,23 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     run = sub.add_parser("run", help="Run the full pangenome/comparative-genomics analysis")
-    run.add_argument(
+    species_group = run.add_mutually_exclusive_group(required=True)
+    species_group.add_argument(
         "--species",
         action="append",
         type=_species_arg,
-        required=True,
         metavar="NAME=PATH",
-        help="A species/isolate: NAME=/path/to/completed/bagRNA/outdir. Repeatable, need >= 2.",
+        help="A species/isolate: NAME=/path/to/completed/bagRNA/outdir. Repeatable, need >= 2. "
+        "Mutually exclusive with --species-dir.",
+    )
+    species_group.add_argument(
+        "--species-dir",
+        type=Path,
+        metavar="DIR",
+        help="A directory whose immediate subdirectories are each one completed bagRNA output "
+        "(the subdirectory name becomes the species name). Simpler alternative to repeating "
+        "--species when every run already lives under one parent folder. Need >= 2 "
+        "subdirectories; hidden ones (starting with '.') are skipped.",
     )
     run.add_argument("--outdir", required=True, type=Path, help="Output directory")
     run.add_argument(
@@ -162,10 +172,31 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _discover_species_dir(species_dir: Path) -> List[tuple]:
+    """Each immediate subdirectory of species_dir becomes one species (name
+    = subdirectory basename), sorted for determinism. Hidden ('.'-prefixed)
+    entries and non-directories are skipped.
+    """
+    return [
+        (entry.name, str(entry))
+        for entry in sorted(species_dir.iterdir())
+        if entry.is_dir() and not entry.name.startswith(".")
+    ]
+
+
 def _run(args: argparse.Namespace) -> int:
-    species_pairs: List[tuple] = args.species
+    if args.species_dir:
+        if not args.species_dir.is_dir():
+            print(f"ERROR: --species-dir not found or not a directory: {args.species_dir}", file=sys.stderr)
+            return 1
+        species_pairs: List[tuple] = _discover_species_dir(args.species_dir)
+        species_source = f"subdirectories of --species-dir {args.species_dir}"
+    else:
+        species_pairs = args.species
+        species_source = "--species"
+
     if len(species_pairs) < 2:
-        print("ERROR: need at least 2 --species for a comparative analysis", file=sys.stderr)
+        print(f"ERROR: need at least 2 species ({species_source}) for a comparative analysis", file=sys.stderr)
         return 1
 
     names_seen = set()

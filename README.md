@@ -94,6 +94,10 @@ bagpan run \
     --outdir results/ \
     --threads 8
 
+# or, if every run already lives under one parent folder (one subdirectory
+# per species, subdirectory name = species name):
+bagpan run --species-dir /path/to/all_runs/ --outdir results/ --threads 8
+
 # or, with orthogroups already computed elsewhere:
 bagpan run \
     --species sp1=/path/to/run1 --species sp2=/path/to/run2 \
@@ -114,8 +118,11 @@ bagpan run --species a=/path/run_a --species b=/path/run_b --outdir results/ \
     --run-dnds --genome-fasta a=/path/genome_a.fa --genome-fasta b=/path/genome_b.fa
 ```
 
-Each `--species` path must be a bagRNA output directory whose
-`functional_annotation/` stage (`ANNOTATE_FUNCTIONAL`) has completed. Running
+Each `--species` path (or, under `--species-dir`, each immediate
+subdirectory) must be a bagRNA output directory whose
+`functional_annotation/` stage (`ANNOTATE_FUNCTIONAL`) has completed.
+`--species` and `--species-dir` are mutually exclusive - use whichever fits
+how your runs are laid out; both need at least 2 species. Running
 OrthoFinder requires Docker (pulls `davidemms/orthofinder`, override with
 `--orthofinder-image`).
 
