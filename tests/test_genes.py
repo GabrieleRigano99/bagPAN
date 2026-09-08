@@ -15,6 +15,26 @@ def test_build_gene_annotation_from_real_gff3():
     assert ga.representative_of_gene["SPA_000001"] == "SPA_000001-T1"
     assert ga.gene_position["SPA_000001"] == ("ctg1", 100, "+")
     assert ga.gene_position["SPA_000002"] == ("ctg1", 500, "+")
+    assert ga.transcript_contig["SPA_000001-T1"] == "ctg1"
+    assert ga.transcript_strand["SPA_000001-T1"] == "+"
+    assert ga.transcript_cds_intervals["SPA_000001-T1"] == [(100, 400)]
+
+
+def test_build_gene_annotation_captures_multi_exon_cds_intervals(tmp_path):
+    from bagpan.genes import _from_gff3
+
+    gff3 = tmp_path / "toy.gff3"
+    gff3.write_text(
+        "##gff-version 3\n"
+        "ctg1\tx\tgene\t1\t1000\t.\t-\t.\tID=GENE1;\n"
+        "ctg1\tx\tmRNA\t1\t1000\t.\t-\t.\tID=GENE1-T1;Parent=GENE1;\n"
+        "ctg1\tx\tCDS\t600\t1000\t.\t-\t0\tID=GENE1-T1.cds;Parent=GENE1-T1;\n"
+        "ctg1\tx\tCDS\t1\t400\t.\t-\t0\tID=GENE1-T1.cds;Parent=GENE1-T1;\n"
+    )
+    ga = _from_gff3(gff3)
+    assert ga.transcript_strand["GENE1-T1"] == "-"
+    assert ga.transcript_contig["GENE1-T1"] == "ctg1"
+    assert sorted(ga.transcript_cds_intervals["GENE1-T1"]) == [(1, 400), (600, 1000)]
 
 
 def test_representative_transcript_picks_longest_cds(tmp_path):

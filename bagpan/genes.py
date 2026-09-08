@@ -15,7 +15,7 @@ import dataclasses
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 from bagpan.discover import SpeciesFiles
 
@@ -29,6 +29,12 @@ class GeneAnnotation:
     representative_of_gene: Dict[str, str]  # gene id -> representative transcript id
     gene_position: Dict[str, Tuple[str, int, str]]  # gene id -> (contig, start, strand)
     from_gff3: bool
+    # coding-sequence coordinates, for splicing CDS nucleotide sequences out of
+    # the genome FASTA (bagpan.sequences) - only populated from_gff3, needed by
+    # bagpan.dnds and empty otherwise.
+    transcript_contig: Dict[str, str] = dataclasses.field(default_factory=dict)
+    transcript_strand: Dict[str, str] = dataclasses.field(default_factory=dict)
+    transcript_cds_intervals: Dict[str, List[Tuple[int, int]]] = dataclasses.field(default_factory=dict)
 
 
 def _parse_attributes(field: str) -> Dict[str, str]:
@@ -45,6 +51,9 @@ def _parse_gff3(path: Path):
     gene_span: Dict[str, Tuple[str, int, int, str]] = {}
     transcript_gene: Dict[str, str] = {}
     transcript_cds_length: Dict[str, int] = defaultdict(int)
+    transcript_contig: Dict[str, str] = {}
+    transcript_strand: Dict[str, str] = {}
+    transcript_cds_intervals: Dict[str, List[Tuple[int, int]]] = defaultdict(list)
 
     with open(path) as fh:
         for line in fh:
@@ -64,16 +73,25 @@ def _parse_gff3(path: Path):
                 transcript_id, parent = attrs.get("ID"), attrs.get("Parent")
                 if transcript_id and parent:
                     transcript_gene[transcript_id] = parent
+                    transcript_contig[transcript_id] = contig
+                    transcript_strand[transcript_id] = strand
             elif feature == "CDS":
                 parent = attrs.get("Parent")
                 if parent:
                     transcript_cds_length[parent] += int(end) - int(start) + 1
+                    transcript_cds_intervals[parent].append((int(start), int(end)))
 
-    return gene_span, transcript_gene, transcript_cds_length
+    return (
+        gene_span, transcript_gene, transcript_cds_length,
+        transcript_contig, transcript_strand, transcript_cds_intervals,
+    )
 
 
 def _from_gff3(path: Path) -> GeneAnnotation:
-    gene_span, transcript_gene, transcript_cds_length = _parse_gff3(path)
+    (
+        gene_span, transcript_gene, transcript_cds_length,
+        transcript_contig, transcript_strand, transcript_cds_intervals,
+    ) = _parse_gff3(path)
 
     transcripts_by_gene: Dict[str, list] = defaultdict(list)
     for transcript_id, gene_id in transcript_gene.items():
@@ -91,6 +109,9 @@ def _from_gff3(path: Path) -> GeneAnnotation:
         representative_of_gene=representative_of_gene,
         gene_position=gene_position,
         from_gff3=True,
+        transcript_contig=transcript_contig,
+        transcript_strand=transcript_strand,
+        transcript_cds_intervals=dict(transcript_cds_intervals),
     )
 
 

@@ -62,12 +62,24 @@ bagPAN:
     funannotate's own `tf_interpro.txt`) - each with a stacked-bar SVG - plus
     a genome/annotation-stats comparison table sourced directly from bagRNA's
     own per-species `annotation_stats.txt`.
+12. Optionally (`--run-dnds`, off by default) computes pairwise dN/dS
+    (Nei-Gojobori 1986) between single-copy orthologs for every species
+    pair - bagPAN's stdlib-only replacement for `funannotate compare`'s
+    `--run_dnds estimate` mode (which shells out to mafft/trimal/PAML): a
+    hand-rolled Needleman-Wunsch protein alignment, back-translated to
+    codons, then classic synonymous/nonsynonymous site and difference
+    counting with a Jukes-Cantor correction. Needs CDS sequences bagRNA
+    doesn't publish, so it splices them itself from a genome FASTA you
+    supply per species (`--genome-fasta NAME=PATH`) plus the CDS coordinates
+    already parsed from `annotated.gff3` - see the **dN/dS caveat** below.
 
-Everything above is stdlib-only (Fisher's exact test, BH-FDR, the
-accumulation-curve power-law fit, the mixture-model classifier, and the GO
-DAG parser/propagation are all hand-rolled - no
-pandas/scipy/matplotlib/statsmodels/goatools). Genome fluidity and
-protein-length statistics from the original FunFinder script are still not
+Everything above except dN/dS's CDS splicing (needs a genome FASTA) is
+stdlib-only (Fisher's exact test, BH-FDR, the accumulation-curve power-law
+fit, the mixture-model classifier, the GO DAG parser/propagation, and the
+pairwise-alignment + Nei-Gojobori dN/dS pipeline are all hand-rolled - no
+pandas/scipy/matplotlib/statsmodels/goatools/mafft/PAML). Genome fluidity
+and protein-length statistics from the original FunFinder script, and
+Pfam/InterPro NMDS ordination from funannotate compare, are still not
 implemented.
 
 ## Usage
@@ -93,6 +105,10 @@ bagpan run --species ... --outdir results/ --run-bigscape --bigscape-pfam /path/
 
 # GO enrichment with full DAG propagation:
 bagpan run --species ... --outdir results/ --go-obo /path/to/go-basic.obo
+
+# pairwise dN/dS on single-copy orthologs (needs a genome FASTA per species):
+bagpan run --species a=/path/run_a --species b=/path/run_b --outdir results/ \
+    --run-dnds --genome-fasta a=/path/genome_a.fa --genome-fasta b=/path/genome_b.fa
 ```
 
 Each `--species` path must be a bagRNA output directory whose
@@ -120,7 +136,8 @@ Key flags: `--percent` (threshold-method cutoff, default 0.5),
 `--classification-method {threshold,mixture}`, `--alpha` (BH-FDR alpha),
 `--accumulation-permutations` (default 200, `0` to skip the curve),
 `--no-viz`, `--run-bigscape` / `--bigscape-pfam` / `--bigscape-image`,
-`--no-go-enrichment`, `--go-obo`, `--go-min-count` (default 3).
+`--no-go-enrichment`, `--go-obo`, `--go-min-count` (default 3),
+`--run-dnds` / `--genome-fasta` / `--dnds-max-orthogroups` (default 200).
 
 ## Output (`--outdir`)
 
@@ -137,6 +154,7 @@ Key flags: `--percent` (threshold-method cutoff, default 0.5),
 - `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts,transcription_factor_domain_counts}.tsv` (+ matching `.svg` stacked-bar charts) - per-species gene counts by class, whole-genome (not per-orthogroup)
 - `comparative/annotation_stats_summary.tsv` - bagRNA's own per-species `annotation_stats.txt` numbers, aligned side by side
 - `bigscape_gene_cluster_families.tsv` - BGC id -> gene-cluster-family, only when `--run-bigscape` resolved a mapping (see caveat below)
+- `dnds/pairwise_dnds.tsv` / `dnds/dnds_summary.tsv` - per-ortholog-pair and per-species-pair dN/dS, only when `--run-dnds` was given (see caveat below)
 - `run_manifest.json` - inputs, species -> locus-prefix mapping, parameters used, and (when it ran) OrthoFinder's own overall statistics
 
 ## BiG-SCAPE caveat
@@ -155,6 +173,32 @@ for real and checked it against BiG-SCAPE's own output directly. The mapping
 is also only BGC-id -> gene-cluster-family; connecting individual proteins/
 orthogroups to a specific BGC still means cross-referencing bagRNA's own
 antiSMASH output by hand.
+
+## dN/dS caveat
+
+`--run-dnds` needs codon-aligned CDS sequences, which bagRNA doesn't publish
+(only the final protein FASTA), so bagPAN splices them itself from a genome
+FASTA you supply per species plus the CDS coordinates already parsed from
+`annotated.gff3`. It only runs on single-copy orthogroups (every present
+species contributes exactly one protein - the only case a pairwise
+comparison is unambiguous), and reports `omega` as `NA` (not 0 or infinity)
+whenever `dS` is 0 - a genuinely undefined ratio, not a lack of divergence.
+
+The core algorithm (Needleman-Wunsch alignment -> codon back-translation ->
+Nei-Gojobori 1986 site/difference counting -> Jukes-Cantor correction) was
+cross-validated during development against biopython's independent
+`Bio.codonalign` NG86 implementation on 15 randomized sequence pairs, all
+matching to 4+ decimal places (biopython itself is not a bagpan dependency -
+this was a one-off development-time check). CDS splicing (multi-exon,
+minus-strand) and the full CLI wiring are covered by unit and end-to-end
+tests. What hasn't been checked is all of this at once against a **real**
+multi-exon gene from a real genome FASTA - the matching genome for the
+`newrun_Sschenckii_1099-18` GFF3 used elsewhere in this README wasn't
+available locally to test against. Also note: the pairwise aligner uses a
+plain match/mismatch scoring scheme, not a substitution matrix (BLOSUM62)
+- a deliberate simplicity/reliability tradeoff, reasonable for the closely
+related single-copy orthologs this only ever runs on, but worth knowing if
+you're used to alignment tools that use one.
 
 ## Development
 

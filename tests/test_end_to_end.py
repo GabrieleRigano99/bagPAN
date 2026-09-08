@@ -200,6 +200,74 @@ def test_run_with_go_obo_propagates_and_records_it_in_manifest(tmp_path):
     assert parent_row["name"] == "catalytic activity"
 
 
+def test_run_with_dnds(tmp_path):
+    outdir = tmp_path / "out"
+    argv = [
+        "run",
+        "--species", f"species_a={FIXTURES / 'species_a'}",
+        "--species", f"species_b={FIXTURES / 'species_b'}",
+        "--species", f"species_c={FIXTURES / 'species_c'}",
+        "--outdir", str(outdir),
+        "--skip-orthofinder",
+        "--orthogroups", str(FIXTURES / "Orthogroups.txt"),
+        "--run-dnds",
+        "--genome-fasta", f"species_a={FIXTURES / 'species_a' / 'genome.fa'}",
+        "--genome-fasta", f"species_b={FIXTURES / 'species_b' / 'genome.fa'}",
+        "--genome-fasta", f"species_c={FIXTURES / 'species_c' / 'genome.fa'}",
+    ]
+    assert main(argv) == 0
+
+    pairwise = {
+        (row["orthogroup"], row["species_a"], row["species_b"]): row
+        for row in _read_tsv(outdir / "dnds" / "pairwise_dnds.tsv")
+    }
+    # species_a and species_c share an identical genome -> zero divergence
+    ac_row = pairwise[("OG0000001", "species_a", "species_c")]
+    assert ac_row["dS"] == "-0" and ac_row["dN"] == "-0"
+    assert ac_row["positive_selection_candidate"] == "NA"  # omega undefined when dS==0
+
+    # species_b carries one synonymous + one nonsynonymous substitution in OG0000001
+    ab_row = pairwise[("OG0000001", "species_a", "species_b")]
+    assert float(ab_row["dS"]) > 0
+    assert float(ab_row["dN"]) > 0
+    assert ab_row["positive_selection_candidate"] == "No"  # omega < 1 here
+
+    summary = {(row["species_a"], row["species_b"]): row for row in _read_tsv(outdir / "dnds" / "dnds_summary.tsv")}
+    assert ("species_a", "species_b") in summary
+    assert summary[("species_a", "species_b")]["n_orthologs_with_omega"] == "1"
+
+
+def test_run_without_dnds_skips_it(tmp_path):
+    outdir = tmp_path / "out"
+    argv = [
+        "run",
+        "--species", f"species_a={FIXTURES / 'species_a'}",
+        "--species", f"species_b={FIXTURES / 'species_b'}",
+        "--species", f"species_c={FIXTURES / 'species_c'}",
+        "--outdir", str(outdir),
+        "--skip-orthofinder",
+        "--orthogroups", str(FIXTURES / "Orthogroups.txt"),
+    ]
+    assert main(argv) == 0
+    assert not (outdir / "dnds").exists()
+
+
+def test_run_with_dnds_missing_genome_fasta_errors(tmp_path):
+    outdir = tmp_path / "out"
+    argv = [
+        "run",
+        "--species", f"species_a={FIXTURES / 'species_a'}",
+        "--species", f"species_b={FIXTURES / 'species_b'}",
+        "--outdir", str(outdir),
+        "--skip-orthofinder",
+        "--orthogroups", str(FIXTURES / "Orthogroups.txt"),
+        "--run-dnds",
+        "--genome-fasta", f"species_a={FIXTURES / 'species_a' / 'genome.fa'}",
+        # species_b's --genome-fasta is deliberately missing
+    ]
+    assert main(argv) == 1
+
+
 def test_run_with_no_viz_skips_plots(tmp_path):
     outdir = tmp_path / "out"
     argv = [

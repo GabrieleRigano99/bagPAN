@@ -13,6 +13,8 @@ from __future__ import annotations
 import csv
 import json
 import shutil
+import statistics
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -317,6 +319,56 @@ def write_bigscape_output(outdir: Path, bigscape_result) -> None:
                 w.writerow([bgc_id, gcf])
 
 
+def write_dnds_output(outdir: Path, dnds_rows: Optional[List[dict]]) -> None:
+    """Writes the pairwise dN/dS results (bagpan.dnds_runner.run_pairwise_dnds)
+    and a per-species-pair summary. No-ops when dN/dS wasn't run
+    (dnds_rows is None) - an empty list (ran but found nothing usable) still
+    writes header-only files, same convention as the other breakdowns.
+    """
+    if dnds_rows is None:
+        return
+    dnds_dir = outdir / "dnds"
+    dnds_dir.mkdir(exist_ok=True)
+
+    def fmt(value):
+        return f"{value:.6g}" if value is not None else "NA"
+
+    with open(dnds_dir / "pairwise_dnds.tsv", "w", newline="") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        w.writerow(
+            [
+                "orthogroup", "species_a", "species_b", "protein_a", "protein_b",
+                "n_codons_compared", "dS", "dN", "omega", "positive_selection_candidate",
+            ]
+        )
+        for row in dnds_rows:
+            omega = row["omega"]
+            candidate = "NA" if omega is None else ("Yes" if omega > 1 else "No")
+            w.writerow(
+                [
+                    row["orthogroup"], row["species_a"], row["species_b"],
+                    row["protein_a"], row["protein_b"], row["n_codons_compared"],
+                    fmt(row["dS"]), fmt(row["dN"]), fmt(omega), candidate,
+                ]
+            )
+
+    omegas_by_pair: Dict[tuple, List[float]] = defaultdict(list)
+    for row in dnds_rows:
+        if row["omega"] is not None:
+            omegas_by_pair[(row["species_a"], row["species_b"])].append(row["omega"])
+
+    with open(dnds_dir / "dnds_summary.tsv", "w", newline="") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        w.writerow(
+            ["species_a", "species_b", "n_orthologs_with_omega", "mean_omega", "median_omega", "n_positive_selection_candidates"]
+        )
+        for (sp_a, sp_b), omegas in sorted(omegas_by_pair.items()):
+            n_positive = sum(1 for o in omegas if o > 1)
+            w.writerow(
+                [sp_a, sp_b, len(omegas), f"{statistics.mean(omegas):.4g}", f"{statistics.median(omegas):.4g}", n_positive]
+            )
+
+
 def _write_class_matrix(
     path: Path, matrix: Dict[str, Dict[str, int]], descriptions: Optional[Dict[str, str]] = None
 ) -> None:
@@ -431,6 +483,7 @@ def run_report(
     run_go_enrichment_flag: bool = True,
     go_dag: Optional[go_enrichment.GoDag] = None,
     go_min_count: int = 3,
+    dnds_rows: Optional[List[dict]] = None,
 ) -> None:
     outdir.mkdir(parents=True, exist_ok=True)
 
@@ -458,6 +511,7 @@ def run_report(
         curve, core_fit, pan_fit = write_accumulation_curve(outdir, orthogroup_set, accumulation_permutations)
 
     write_bigscape_output(outdir, bigscape_result)
+    write_dnds_output(outdir, dnds_rows)
     write_comparative_breakdowns(outdir, species_annotations, make_viz)
 
     if run_go_enrichment_flag:

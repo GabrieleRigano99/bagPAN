@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-from bagpan import genes, go_enrichment, synteny
+from bagpan import dnds_runner, genes, go_enrichment, sequences, synteny
 from bagpan.bigscape_runner import DEFAULT_IMAGE as DEFAULT_BIGSCAPE_IMAGE
 from bagpan.bigscape_runner import BigscapeError, run_bigscape
 from bagpan.categories import SpeciesAnnotations
@@ -137,6 +137,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Only test GO terms present in at least this many orthogroups pangenome-wide "
         "[default: 3]",
     )
+    run.add_argument(
+        "--run-dnds",
+        action="store_true",
+        help="Also compute pairwise dN/dS (Nei-Gojobori, pure Python - no mafft/PAML) on "
+        "single-copy orthologs between every species pair. Off by default; requires "
+        "--genome-fasta for every species.",
+    )
+    run.add_argument(
+        "--genome-fasta",
+        action="append",
+        type=_species_arg,
+        metavar="NAME=PATH",
+        help="Genome assembly FASTA for a species (required per --species when --run-dnds "
+        "is given) - used to splice CDS nucleotide sequences via annotated.gff3's coordinates.",
+    )
+    run.add_argument(
+        "--dnds-max-orthogroups",
+        type=int,
+        default=200,
+        help="Cap on the number of single-copy orthogroups analyzed for dN/dS [default: 200]",
+    )
 
     return parser
 
@@ -160,6 +181,17 @@ def _run(args: argparse.Namespace) -> int:
     if args.run_bigscape and not args.bigscape_pfam:
         print("ERROR: --run-bigscape requires --bigscape-pfam PATH", file=sys.stderr)
         return 1
+
+    genome_fasta_paths: Dict[str, str] = dict(args.genome_fasta or [])
+    if args.run_dnds:
+        missing = [name for name, _ in species_pairs if name not in genome_fasta_paths]
+        if missing:
+            print(
+                f"ERROR: --run-dnds requires --genome-fasta NAME=PATH for every species; "
+                f"missing: {', '.join(missing)}",
+                file=sys.stderr,
+            )
+            return 1
 
     print(f"Discovering annotation files for {len(species_pairs)} species...")
     species_files: Dict[str, SpeciesFiles] = {}
@@ -244,6 +276,20 @@ def _run(args: argparse.Namespace) -> int:
         if not bigscape_result.gcf_by_bgc:
             print("  (no gene-cluster-family mapping could be resolved from BiG-SCAPE's output)")
 
+    dnds_rows = None
+    if args.run_dnds:
+        print("Extracting CDS sequences and computing pairwise dN/dS...")
+        cds_by_protein: Dict[str, str] = {}
+        for name in species_files:
+            genome = sequences.parse_fasta(genome_fasta_paths[name])
+            cds_by_protein.update(dnds_runner.extract_all_cds(gene_annotations[name], genome))
+        dnds_rows = dnds_runner.run_pairwise_dnds(
+            orthogroup_set, locus_prefix_to_species, cds_by_protein,
+            max_orthogroups=args.dnds_max_orthogroups,
+        )
+        n_orthogroups = len({row["orthogroup"] for row in dnds_rows})
+        print(f"  {len(dnds_rows)} pairwise comparisons across {n_orthogroups} single-copy orthogroups")
+
     go_dag = None
     if not args.no_go_enrichment:
         if args.go_obo:
@@ -263,6 +309,7 @@ def _run(args: argparse.Namespace) -> int:
         "percent_threshold": args.percent,
         "classification_method": args.classification_method,
         "alpha": args.alpha,
+        "dnds_max_orthogroups": args.dnds_max_orthogroups if args.run_dnds else None,
     }
     run_report(
         args.outdir,
@@ -284,6 +331,7 @@ def _run(args: argparse.Namespace) -> int:
         run_go_enrichment_flag=not args.no_go_enrichment,
         go_dag=go_dag,
         go_min_count=args.go_min_count,
+        dnds_rows=dnds_rows,
     )
     print("Done.")
     return 0
