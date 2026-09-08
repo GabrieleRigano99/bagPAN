@@ -5,7 +5,7 @@ from bagpan.annotations import GeneFunctionalAnnotation
 def _gene(gene_id, **overrides):
     defaults = dict(
         gene_id=gene_id, mrna_ids=set(), product="", gene_symbol="",
-        go_terms=set(), ec_numbers=set(), kegg_ko=set(), interpro=set(), pfam=set(),
+        go_terms=set(), ec_numbers=set(), kegg_ko=set(), kegg_pathways=set(), interpro=set(), pfam=set(),
         secreted=False, signalp=False, tm_tmbed=0, tm_phobius=0, sp_phobius=False,
         effector_class="", cazyme_family="", merops_hit="", merops_family="",
         rfam=set(), bgc_type="", bgc_role="", bgc_domains=set(), cog_category="",
@@ -93,6 +93,20 @@ def test_secondary_metabolite_type_counts_splits_hybrids():
     }
     counts = cs.secondary_metabolite_type_counts(species_annotations)
     assert counts["sx"] == {"NRPS": 2, "T1PKS": 1}
+
+
+def test_kegg_pathway_counts_per_species():
+    species_annotations = {
+        "sx": _FakeSpeciesAnnotations([
+            _gene("g1", kegg_pathways={"map00062", "map01100"}),
+            _gene("g2", kegg_pathways={"map00062"}),
+            _gene("g3"),  # no KEGG pathway
+        ]),
+        "sy": _FakeSpeciesAnnotations([_gene("g4", kegg_pathways={"map01100"})]),
+    }
+    counts = cs.kegg_pathway_counts(species_annotations)
+    assert counts["sx"] == {"map00062": 2, "map01100": 1}
+    assert counts["sy"] == {"map01100": 1}
 
 
 def test_all_class_dictionaries_use_uppercase_single_or_short_codes():

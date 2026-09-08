@@ -30,6 +30,7 @@ class GeneFunctionalAnnotation:
     go_terms: Set[str]
     ec_numbers: Set[str]
     kegg_ko: Set[str]
+    kegg_pathways: Set[str]
     interpro: Set[str]
     pfam: Set[str]
     secreted: bool
@@ -50,6 +51,25 @@ class GeneFunctionalAnnotation:
 
 def _split(value: str, sep: str) -> Set[str]:
     return {v.strip() for v in value.split(sep) if v.strip()}
+
+
+_KEGG_PATHWAY_RE = re.compile(r"^(?:ko|map)(\d+)$")
+
+
+def _split_kegg_pathways(value: str) -> Set[str]:
+    """eggNOG's KEGG_Pathway field lists each pathway twice, once as a 'ko'
+    (KEGG Orthology-based) id and once as the equivalent 'map' (reference
+    pathway) id, e.g. 'ko00062|map00062' - both name the same pathway, so
+    normalize both to a single canonical 'mapNNNNN' id.
+    """
+    ids: Set[str] = set()
+    for token in value.split("|"):
+        token = token.strip()
+        if not token:
+            continue
+        match = _KEGG_PATHWAY_RE.match(token)
+        ids.add(f"map{match.group(1)}" if match else token)
+    return ids
 
 
 def _to_int(value: str) -> int:
@@ -85,6 +105,7 @@ def parse_functional_annotation_tsv(path: Optional[Path]) -> Dict[str, GeneFunct
                 go_terms=_split(get(row, "GO_terms"), "|"),
                 ec_numbers=_split(get(row, "EC_numbers"), ","),
                 kegg_ko=_split(get(row, "KEGG_KO"), ","),
+                kegg_pathways=_split_kegg_pathways(get(row, "KEGG_pathways")),
                 interpro=_split(get(row, "InterPro_accessions"), "|"),
                 pfam=_split(get(row, "Pfam_domains"), "|"),
                 secreted=get(row, "Secreted") == "Y",

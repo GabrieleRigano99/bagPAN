@@ -404,6 +404,7 @@ def write_comparative_breakdowns(
         ("cog_category_counts", comparative_stats.cog_category_counts(species_annotations), comparative_stats.COG_DESCRIPTIONS),
         ("secondary_metabolite_type_counts", comparative_stats.secondary_metabolite_type_counts(species_annotations), None),
         ("transcription_factor_domain_counts", comparative_stats.transcription_factor_domain_counts(species_annotations), comparative_stats.TF_INTERPRO_DESCRIPTIONS),
+        ("kegg_pathway_counts", comparative_stats.kegg_pathway_counts(species_annotations), None),
     ]
     for name, matrix, descriptions in breakdowns:
         _write_class_matrix(comp_dir / f"{name}.tsv", matrix, descriptions)

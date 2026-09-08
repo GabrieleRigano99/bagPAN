@@ -29,6 +29,15 @@ def test_parse_functional_annotation_tsv_multivalue_fields():
     assert gene.interpro == {"IPR000001", "IPR001138"}
     assert gene.go_terms == {"GO:0003700"}
     assert gene.secreted is True
+    assert gene.kegg_pathways == {"map00062", "map01100"}
+
+
+def test_split_kegg_pathways_dedups_ko_and_map_prefixes():
+    assert ann._split_kegg_pathways("ko00062|map00062") == {"map00062"}
+    assert ann._split_kegg_pathways("ko00062|ko01100|map00062|map01100") == {"map00062", "map01100"}
+    assert ann._split_kegg_pathways("") == set()
+    # unrecognized format is kept as-is rather than silently dropped
+    assert ann._split_kegg_pathways("weirdformat123") == {"weirdformat123"}
 
 
 def test_parse_functional_annotation_tsv_transmembrane_and_effector():

@@ -113,12 +113,13 @@ def test_run_end_to_end_with_precomputed_orthogroups(tmp_path):
     for name in [
         "cazyme_family_counts", "merops_class_counts", "cog_category_counts",
         "secondary_metabolite_type_counts", "transcription_factor_domain_counts",
-        "annotation_stats_summary",
+        "kegg_pathway_counts", "annotation_stats_summary",
     ]:
         assert (comp_dir / f"{name}.tsv").exists()
     for name in [
         "cazyme_family_counts", "merops_class_counts", "cog_category_counts",
         "secondary_metabolite_type_counts", "transcription_factor_domain_counts",
+        "kegg_pathway_counts",
     ]:
         assert (comp_dir / f"{name}.svg").exists()
 
@@ -134,6 +135,11 @@ def test_run_end_to_end_with_precomputed_orthogroups(tmp_path):
     tf_domains = {row["species"]: row for row in _read_tsv(comp_dir / "transcription_factor_domain_counts.tsv") if row.get("species")}
     assert tf_domains["species_b"]["IPR001138"] == "1"  # SPB_000001's Zn(2)-Cys(6) domain
     assert tf_domains["species_a"].get("IPR001138", "0") == "0"
+
+    kegg_pathways = {row["species"]: row for row in _read_tsv(comp_dir / "kegg_pathway_counts.tsv") if row.get("species")}
+    assert kegg_pathways["species_b"]["map00062"] == "1"
+    assert kegg_pathways["species_b"]["map01100"] == "1"  # ko/map prefixes deduped to one column
+    assert kegg_pathways["species_a"].get("map00062", "0") == "0"
 
     stats_summary = {row["metric"]: row for row in _read_tsv(comp_dir / "annotation_stats_summary.tsv") if row.get("metric")}
     assert stats_summary["Total genes"]["species_a"] == "3 (100.0%)"

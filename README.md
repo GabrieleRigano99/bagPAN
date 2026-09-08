@@ -59,9 +59,12 @@ bagPAN:
     (GH/GT/PL/CE/CBM/AA), MEROPS peptidase class, COG functional category,
     antiSMASH BGC type, and transcription-factor family (via a curated list
     of 37 fungal TF-associated InterPro domains, taken verbatim from
-    funannotate's own `tf_interpro.txt`) - each with a stacked-bar SVG - plus
-    a genome/annotation-stats comparison table sourced directly from bagRNA's
-    own per-species `annotation_stats.txt`.
+    funannotate's own `tf_interpro.txt`), and KEGG pathway (eggNOG's
+    `KEGG_pathways` column lists each pathway twice, once as a `ko` id and
+    once as the equivalent `map` id - deduped to one canonical `mapNNNNN`
+    id) - each with a stacked-bar SVG - plus a genome/annotation-stats
+    comparison table sourced directly from bagRNA's own per-species
+    `annotation_stats.txt`.
 12. Optionally (`--run-dnds`, off by default) computes pairwise dN/dS
     (Nei-Gojobori 1986) between single-copy orthologs for every species
     pair - bagPAN's stdlib-only replacement for `funannotate compare`'s
@@ -151,7 +154,7 @@ Key flags: `--percent` (threshold-method cutoff, default 0.5),
 - `go_enrichment/go_enrichment_{core,accessory,singleton}.tsv` - per-class GO term enrichment (Fisher's exact + BH-FDR)
 - `species_tree.nwk` - OrthoFinder's rooted species tree (when it ran OrthoFinder itself)
 - `report.html`, `presence_absence_matrix.svg`, `category_enrichment.svg`, `pangenome_accumulation.svg`
-- `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts,transcription_factor_domain_counts}.tsv` (+ matching `.svg` stacked-bar charts) - per-species gene counts by class, whole-genome (not per-orthogroup)
+- `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts,transcription_factor_domain_counts,kegg_pathway_counts}.tsv` (+ matching `.svg` stacked-bar charts) - per-species gene counts by class, whole-genome (not per-orthogroup)
 - `comparative/annotation_stats_summary.tsv` - bagRNA's own per-species `annotation_stats.txt` numbers, aligned side by side
 - `bigscape_gene_cluster_families.tsv` - BGC id -> gene-cluster-family, only when `--run-bigscape` resolved a mapping (see caveat below)
 - `dnds/pairwise_dnds.tsv` / `dnds/dnds_summary.tsv` - per-ortholog-pair and per-species-pair dN/dS, only when `--run-dnds` was given (see caveat below)

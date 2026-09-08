@@ -178,3 +178,9 @@ def transcription_factor_domains(gene: GeneFunctionalAnnotation) -> Set[str]:
 
 def transcription_factor_domain_counts(species_annotations: Dict[str, SpeciesAnnotations]) -> Dict[str, Dict[str, int]]:
     return _count_by_class(species_annotations, transcription_factor_domains)
+
+
+def kegg_pathway_counts(species_annotations: Dict[str, SpeciesAnnotations]) -> Dict[str, Dict[str, int]]:
+    """Per-species gene counts by KEGG pathway (canonical 'mapNNNNN' ids -
+    see annotations._split_kegg_pathways for the ko/map dedup)."""
+    return _count_by_class(species_annotations, lambda g: g.kegg_pathways)
