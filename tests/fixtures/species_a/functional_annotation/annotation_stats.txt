@@ -1,0 +1,5 @@
+=== bagRNA Functional Annotation Summary ===
+
+Total genes                            3  (100.0%)
+With product name                      1  (33.3%)
+Secreted proteins                      2  (66.7%)

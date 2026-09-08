@@ -16,7 +16,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from bagpan import curves, go_enrichment, mixture, stats, viz
+from bagpan import comparative_stats, curves, go_enrichment, mixture, stats, viz
 from bagpan.categories import CATEGORY_NAMES, SpeciesAnnotations
 from bagpan.orthogroups import OrthogroupSet
 
@@ -317,6 +317,66 @@ def write_bigscape_output(outdir: Path, bigscape_result) -> None:
                 w.writerow([bgc_id, gcf])
 
 
+def _write_class_matrix(
+    path: Path, matrix: Dict[str, Dict[str, int]], descriptions: Optional[Dict[str, str]] = None
+) -> None:
+    species = sorted(matrix)
+    classes = sorted({c for tally in matrix.values() for c in tally})
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        w.writerow(["species", *classes])
+        for sp in species:
+            w.writerow([sp, *(matrix[sp].get(c, 0) for c in classes)])
+        if descriptions:
+            w.writerow([])
+            w.writerow(["class", "description"])
+            for c in classes:
+                w.writerow([c, descriptions.get(c, "")])
+
+
+def write_comparative_breakdowns(
+    outdir: Path, species_annotations: Dict[str, SpeciesAnnotations], make_viz: bool
+) -> None:
+    """Per-species class-level breakdowns (CAZyme family, MEROPS class, COG
+    category, secondary-metabolite BGC type) and an annotation-stats
+    comparison table - inspired by funannotate compare's CAZy/MEROPS/COG/SM
+    summary tables and bar charts, computed directly from
+    functional_annotation.tsv (whole-genome, not orthology-dependent).
+    """
+    comp_dir = outdir / "comparative"
+    comp_dir.mkdir(exist_ok=True)
+
+    breakdowns = [
+        ("cazyme_family_counts", comparative_stats.cazyme_family_counts(species_annotations), comparative_stats.CAZY_CLASS_DESCRIPTIONS),
+        ("merops_class_counts", comparative_stats.merops_family_counts(species_annotations), comparative_stats.MEROPS_CLASS_DESCRIPTIONS),
+        ("cog_category_counts", comparative_stats.cog_category_counts(species_annotations), comparative_stats.COG_DESCRIPTIONS),
+        ("secondary_metabolite_type_counts", comparative_stats.secondary_metabolite_type_counts(species_annotations), None),
+    ]
+    for name, matrix, descriptions in breakdowns:
+        _write_class_matrix(comp_dir / f"{name}.tsv", matrix, descriptions)
+        if make_viz:
+            (comp_dir / f"{name}.svg").write_text(viz.stacked_bar_svg(matrix))
+
+    all_labels: List[str] = []
+    seen = set()
+    for sa in species_annotations.values():
+        for label in sa.annotation_stats:
+            if label not in seen:
+                seen.add(label)
+                all_labels.append(label)
+
+    with open(comp_dir / "annotation_stats_summary.tsv", "w", newline="") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        species_names = sorted(species_annotations)
+        w.writerow(["metric", *species_names])
+        for label in all_labels:
+            row = [label]
+            for sp in species_names:
+                entry = species_annotations[sp].annotation_stats.get(label)
+                row.append(f"{entry[0]} ({entry[1]})" if entry else "")
+            w.writerow(row)
+
+
 def write_go_enrichment(
     outdir: Path,
     orthogroup_set: OrthogroupSet,
@@ -397,6 +457,7 @@ def run_report(
         curve, core_fit, pan_fit = write_accumulation_curve(outdir, orthogroup_set, accumulation_permutations)
 
     write_bigscape_output(outdir, bigscape_result)
+    write_comparative_breakdowns(outdir, species_annotations, make_viz)
 
     if run_go_enrichment_flag:
         write_go_enrichment(

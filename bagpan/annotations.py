@@ -16,8 +16,9 @@ that one field.
 from __future__ import annotations
 
 import dataclasses
+import re
 from pathlib import Path
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, Tuple
 
 
 @dataclasses.dataclass
@@ -44,6 +45,7 @@ class GeneFunctionalAnnotation:
     bgc_type: str
     bgc_role: str
     bgc_domains: Set[str]
+    cog_category: str
 
 
 def _split(value: str, sep: str) -> Set[str]:
@@ -98,7 +100,27 @@ def parse_functional_annotation_tsv(path: Optional[Path]) -> Dict[str, GeneFunct
                 bgc_type=get(row, "BGC_cluster_type"),
                 bgc_role=get(row, "BGC_gene_role"),
                 bgc_domains=_split(get(row, "BGC_domains"), "|"),
+                cog_category=get(row, "COG_category"),
             )
+    return result
+
+
+def parse_annotation_stats(path: Optional[Path]) -> Dict[str, Tuple[int, str]]:
+    """Parses bagRNA's per-species annotation_stats.txt
+    ('Total genes                        17136  (100.0%)' style lines,
+    written by bin/merge_functional_annotations.py) into
+    {label: (count, pct_string)}.
+    """
+    result: Dict[str, Tuple[int, str]] = {}
+    if path is None:
+        return result
+    pattern = re.compile(r"^(.+?)\s{2,}(\d+)\s+\(([\d.]+%)\)\s*$")
+    with open(path) as fh:
+        for line in fh:
+            match = pattern.match(line.rstrip("\n"))
+            if match:
+                label, count, pct = match.groups()
+                result[label.strip()] = (int(count), pct)
     return result
 
 

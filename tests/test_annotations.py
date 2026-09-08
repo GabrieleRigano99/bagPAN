@@ -63,3 +63,21 @@ def test_parse_effectorp3_new_column_format(tmp_path):
 
 def test_parse_effectorp3_missing_file_returns_empty():
     assert ann.parse_effectorp3(None) == {}
+
+
+def test_parse_annotation_stats(tmp_path):
+    path = tmp_path / "annotation_stats.txt"
+    path.write_text(
+        "=== bagRNA Functional Annotation Summary ===\n\n"
+        "Total genes                        17136  (100.0%)\n"
+        "With product name                   4187  (24.4%)\n"
+        "Secreted proteins                    512  (3.0%)\n"
+    )
+    stats = ann.parse_annotation_stats(path)
+    assert stats["Total genes"] == (17136, "100.0%")
+    assert stats["With product name"] == (4187, "24.4%")
+    assert stats["Secreted proteins"] == (512, "3.0%")
+
+
+def test_parse_annotation_stats_missing_file_returns_empty():
+    assert ann.parse_annotation_stats(None) == {}

@@ -31,6 +31,7 @@ class SpeciesFiles:
     gff3: Optional[Path] = None
     antismash_regions_dir: Optional[Path] = None
     effectorp3: Optional[Path] = None
+    annotation_stats: Optional[Path] = None
 
 
 def _detect_locus_prefix(proteome: Path) -> str:
@@ -85,6 +86,10 @@ def discover_species(name: str, bagrna_outdir: "str | Path") -> SpeciesFiles:
     if not antismash_regions_dir.is_dir() or not any(antismash_regions_dir.glob("*.region*.gbk")):
         antismash_regions_dir = None
 
+    annotation_stats = func_root / "annotation_stats.txt"
+    if not annotation_stats.is_file():
+        annotation_stats = None
+
     return SpeciesFiles(
         name=name,
         root=root,
@@ -94,4 +99,5 @@ def discover_species(name: str, bagrna_outdir: "str | Path") -> SpeciesFiles:
         gff3=gff3,
         antismash_regions_dir=antismash_regions_dir,
         effectorp3=effectorp3,
+        annotation_stats=annotation_stats,
     )

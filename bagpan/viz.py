@@ -150,6 +150,78 @@ def accumulation_curve_svg(
     return "\n".join(svg)
 
 
+def _palette(n: int) -> list:
+    return [f"hsl({(i * 360 / max(n, 1)) % 360:.0f}, 65%, 55%)" for i in range(n)]
+
+
+def stacked_bar_svg(
+    matrix: Dict[str, Dict[str, int]], bar_width: int = 60, gap: int = 30, plot_height: int = 300
+) -> str:
+    """Per-species stacked bar chart of gene counts by class (CAZyme family,
+    MEROPS class, COG category, BGC type, ...) - funannotate compare's
+    CAZy.graph.pdf/COGS.graph.pdf/SM.graph.pdf style, minus matplotlib.
+    """
+    species = sorted(matrix)
+    classes = sorted({c for tally in matrix.values() for c in tally})
+    if not species or not classes:
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="220" height="40"><text x="6" y="22">(no data)</text></svg>'
+
+    totals = {sp: sum(matrix[sp].values()) for sp in species}
+    max_total = max(totals.values()) or 1
+    class_color = dict(zip(classes, _palette(len(classes))))
+
+    margin_left = 40
+    margin_top = 16
+    legend_width = 130
+    width = margin_left + len(species) * (bar_width + gap) + legend_width
+    height = margin_top + plot_height + 50
+
+    svg = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'font-family="sans-serif" font-size="11">'
+    ]
+    svg.append(
+        f'<line x1="{margin_left}" y1="{margin_top}" x2="{margin_left}" '
+        f'y2="{margin_top + plot_height}" stroke="black"/>'
+    )
+    svg.append(
+        f'<line x1="{margin_left}" y1="{margin_top + plot_height}" '
+        f'x2="{width - legend_width}" y2="{margin_top + plot_height}" stroke="black"/>'
+    )
+
+    x = margin_left + gap / 2
+    for sp in species:
+        y = margin_top + plot_height
+        for cls in classes:
+            count = matrix[sp].get(cls, 0)
+            if count == 0:
+                continue
+            seg_height = plot_height * (count / max_total)
+            y -= seg_height
+            svg.append(
+                f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_width}" height="{seg_height:.1f}" '
+                f'fill="{class_color[cls]}"/>'
+            )
+        svg.append(
+            f'<text x="{x + bar_width / 2:.1f}" y="{margin_top + plot_height + 16}" '
+            f'text-anchor="middle">{_esc(sp)}</text>'
+        )
+        svg.append(
+            f'<text x="{x + bar_width / 2:.1f}" y="{margin_top + plot_height + 30}" '
+            f'text-anchor="middle">{totals[sp]}</text>'
+        )
+        x += bar_width + gap
+
+    legend_x = width - legend_width + 10
+    legend_y = margin_top
+    for cls in classes:
+        svg.append(f'<rect x="{legend_x}" y="{legend_y}" width="10" height="10" fill="{class_color[cls]}"/>')
+        svg.append(f'<text x="{legend_x + 14}" y="{legend_y + 9}">{_esc(cls)}</text>')
+        legend_y += 16
+    svg.append("</svg>")
+    return "\n".join(svg)
+
+
 def write_report_html(
     outdir: Path,
     orthogroup_set: OrthogroupSet,

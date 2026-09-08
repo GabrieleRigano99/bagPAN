@@ -102,9 +102,33 @@ def test_run_end_to_end_with_precomputed_orthogroups(tmp_path):
     cazymes = {row["orthogroup"]: row for row in _read_tsv(cat_dir / "cazymes.tsv")}
     assert cazymes["OG0000003"]["hit"] == "Yes"
 
-    # secondary_metabolites: no fixture gene has BGC_cluster_type/BGC_gene_role set
+    # secondary_metabolites: only SPC_000002 (OG4) has BGC_cluster_type/BGC_gene_role set
     metabolites = {row["orthogroup"]: row for row in _read_tsv(cat_dir / "secondary_metabolites.tsv")}
     assert metabolites["OG0000001"]["hit"] == "No"
+    assert metabolites["OG0000004"]["hit"] == "Yes"
+
+    # comparative breakdowns (funannotate-compare-inspired): tabulated directly
+    # from functional_annotation.tsv, independent of orthogroups
+    comp_dir = outdir / "comparative"
+    for name in [
+        "cazyme_family_counts", "merops_class_counts", "cog_category_counts",
+        "secondary_metabolite_type_counts", "annotation_stats_summary",
+    ]:
+        assert (comp_dir / f"{name}.tsv").exists()
+    for name in ["cazyme_family_counts", "merops_class_counts", "cog_category_counts", "secondary_metabolite_type_counts"]:
+        assert (comp_dir / f"{name}.svg").exists()
+
+    cazy = {row["species"]: row for row in _read_tsv(comp_dir / "cazyme_family_counts.tsv") if row.get("species")}
+    assert cazy["species_a"]["GH"] == "1"
+
+    cog = {row["species"]: row for row in _read_tsv(comp_dir / "cog_category_counts.tsv") if row.get("species")}
+    assert cog["species_b"]["G"] == "1" and cog["species_b"]["M"] == "1"  # SPB_000001's "GM" field splits into both
+
+    sm_types = {row["species"]: row for row in _read_tsv(comp_dir / "secondary_metabolite_type_counts.tsv") if row.get("species")}
+    assert sm_types["species_c"]["NRPS"] == "1"
+
+    stats_summary = {row["metric"]: row for row in _read_tsv(comp_dir / "annotation_stats_summary.tsv") if row.get("metric")}
+    assert stats_summary["Total genes"]["species_a"] == "3 (100.0%)"
 
     manifest = json.loads((outdir / "run_manifest.json").read_text())
     assert set(manifest["species"]) == {"species_a", "species_b", "species_c"}
@@ -184,6 +208,8 @@ def test_run_with_no_viz_skips_plots(tmp_path):
     assert not (outdir / "report.html").exists()
     assert not (outdir / "presence_absence_matrix.svg").exists()
     assert (outdir / "orthogroup_classification.tsv").exists()
+    assert not (outdir / "comparative" / "cazyme_family_counts.svg").exists()
+    assert (outdir / "comparative" / "cazyme_family_counts.tsv").exists()
 
 
 def test_run_with_mixture_classification_method(tmp_path):

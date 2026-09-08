@@ -37,6 +37,7 @@ class SpeciesAnnotations:
         # numeric probability the merged TSV doesn't (it only keeps the class
         # label) - protein-id keyed, unlike everything else here.
         self.effector_scores = ann.parse_effectorp3(files.effectorp3)
+        self.annotation_stats = ann.parse_annotation_stats(files.annotation_stats)
 
         self.go_terms: Dict[str, Set[str]] = {gid: g.go_terms for gid, g in self.genes.items() if g.go_terms}
 

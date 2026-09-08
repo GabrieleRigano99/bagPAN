@@ -6,6 +6,7 @@ from bagpan.viz import (
     accumulation_curve_svg,
     category_bar_svg,
     presence_absence_matrix_svg,
+    stacked_bar_svg,
     write_report_html,
 )
 
@@ -59,6 +60,19 @@ def test_accumulation_curve_svg_is_well_formed_with_and_without_fit():
 
 def test_accumulation_curve_svg_handles_empty_curve():
     _assert_well_formed_svg(accumulation_curve_svg({}))
+
+
+def test_stacked_bar_svg_is_well_formed():
+    matrix = {"sx": {"GH": 3, "CBM": 1}, "sy": {"GH": 1, "AA": 2}}
+    svg = stacked_bar_svg(matrix)
+    _assert_well_formed_svg(svg)
+    assert "sx" in svg and "sy" in svg
+    assert "GH" in svg and "CBM" in svg and "AA" in svg
+
+
+def test_stacked_bar_svg_handles_empty_matrix():
+    _assert_well_formed_svg(stacked_bar_svg({}))
+    _assert_well_formed_svg(stacked_bar_svg({"sx": {}}))
 
 
 def test_write_report_html(tmp_path):

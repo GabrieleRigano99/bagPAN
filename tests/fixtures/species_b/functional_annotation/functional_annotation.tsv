@@ -1,3 +1,3 @@
 gene_id	mrna_ids	product	gene_symbol	GO_terms	GO_propagated_count	EC_numbers	KEGG_KO	KEGG_pathways	COG_category	eggNOG_OG	eggNOG_description	InterPro_accessions	Pfam_domains	PANTHER	Secreted	SignalP	TM_helices_TMbed	TM_helices_Phobius	SP_Phobius	EffectorP_class	CAZyme_family	CAZyme_tools_agree	PUL_cluster	MEROPS_hit	MEROPS_family	TC_id	PHIbase_accession	PHIbase_gene	PHIbase_phenotype	Rfam_accessions	BGC_cluster_type	BGC_gene_role	BGC_domains	SMCOG
-SPB_000001	SPB_000001-T1	Foo protein 1 ortholog		GO:0003700								IPR000001			Y	Y																		
+SPB_000001	SPB_000001-T1	Foo protein 1 ortholog		GO:0003700					GM			IPR000001			Y	Y																		
 SPB_000002	SPB_000002-T1	hypothetical protein													Y	Y																		
