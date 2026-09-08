@@ -351,6 +351,7 @@ def write_comparative_breakdowns(
         ("merops_class_counts", comparative_stats.merops_family_counts(species_annotations), comparative_stats.MEROPS_CLASS_DESCRIPTIONS),
         ("cog_category_counts", comparative_stats.cog_category_counts(species_annotations), comparative_stats.COG_DESCRIPTIONS),
         ("secondary_metabolite_type_counts", comparative_stats.secondary_metabolite_type_counts(species_annotations), None),
+        ("transcription_factor_domain_counts", comparative_stats.transcription_factor_domain_counts(species_annotations), comparative_stats.TF_INTERPRO_DESCRIPTIONS),
     ]
     for name, matrix, descriptions in breakdowns:
         _write_class_matrix(comp_dir / f"{name}.tsv", matrix, descriptions)

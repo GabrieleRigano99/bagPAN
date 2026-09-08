@@ -26,7 +26,7 @@ def test_parse_functional_annotation_tsv_multivalue_fields():
     genes = ann.parse_functional_annotation_tsv(sf.functional_annotation_tsv)
 
     gene = genes["SPB_000001"]
-    assert gene.interpro == {"IPR000001"}
+    assert gene.interpro == {"IPR000001", "IPR001138"}
     assert gene.go_terms == {"GO:0003700"}
     assert gene.secreted is True
 

@@ -54,11 +54,13 @@ bagPAN:
     goatools/topGO; without it, only the exact annotated (leaf-level) terms
     are tested.
 11. Writes whole-genome (not orthology-dependent) comparative breakdowns
-    inspired by `funannotate compare`'s CAZy/MEROPS/COG/secondary-metabolite
+    inspired by `funannotate compare`'s CAZy/MEROPS/COG/TF/secondary-metabolite
     summary tables: per-species gene counts by CAZyme family class
     (GH/GT/PL/CE/CBM/AA), MEROPS peptidase class, COG functional category,
-    and antiSMASH BGC type, each with a stacked-bar SVG - plus a
-    genome/annotation-stats comparison table sourced directly from bagRNA's
+    antiSMASH BGC type, and transcription-factor family (via a curated list
+    of 37 fungal TF-associated InterPro domains, taken verbatim from
+    funannotate's own `tf_interpro.txt`) - each with a stacked-bar SVG - plus
+    a genome/annotation-stats comparison table sourced directly from bagRNA's
     own per-species `annotation_stats.txt`.
 
 Everything above is stdlib-only (Fisher's exact test, BH-FDR, the
@@ -132,7 +134,7 @@ Key flags: `--percent` (threshold-method cutoff, default 0.5),
 - `go_enrichment/go_enrichment_{core,accessory,singleton}.tsv` - per-class GO term enrichment (Fisher's exact + BH-FDR)
 - `species_tree.nwk` - OrthoFinder's rooted species tree (when it ran OrthoFinder itself)
 - `report.html`, `presence_absence_matrix.svg`, `category_enrichment.svg`, `pangenome_accumulation.svg`
-- `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts}.tsv` (+ matching `.svg` stacked-bar charts) - per-species gene counts by class, whole-genome (not per-orthogroup)
+- `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts,transcription_factor_domain_counts}.tsv` (+ matching `.svg` stacked-bar charts) - per-species gene counts by class, whole-genome (not per-orthogroup)
 - `comparative/annotation_stats_summary.tsv` - bagRNA's own per-species `annotation_stats.txt` numbers, aligned side by side
 - `bigscape_gene_cluster_families.tsv` - BGC id -> gene-cluster-family, only when `--run-bigscape` resolved a mapping (see caveat below)
 - `run_manifest.json` - inputs, species -> locus-prefix mapping, parameters used, and (when it ran) OrthoFinder's own overall statistics

@@ -99,3 +99,33 @@ def test_all_class_dictionaries_use_uppercase_single_or_short_codes():
     assert set(cs.COG_DESCRIPTIONS) == set("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     assert set(cs.MEROPS_CLASS_DESCRIPTIONS) <= set("ACGMNPSTU")
     assert "GH" in cs.CAZY_CLASS_DESCRIPTIONS and "AA" in cs.CAZY_CLASS_DESCRIPTIONS
+
+
+def test_tf_interpro_descriptions_are_well_formed_ipr_accessions():
+    assert len(cs.TF_INTERPRO_DESCRIPTIONS) >= 30
+    for ipr_id in cs.TF_INTERPRO_DESCRIPTIONS:
+        assert ipr_id.startswith("IPR") and ipr_id[3:].isdigit()
+    # spot-check a couple of well-known fungal TF domains made it in
+    assert cs.TF_INTERPRO_DESCRIPTIONS["IPR001138"] == "Fungal Zn(2)-Cys(6) binuclear cluster domain"
+    assert "IPR007219" in cs.TF_INTERPRO_DESCRIPTIONS
+
+
+def test_transcription_factor_domains_intersects_gene_interpro():
+    gene = _gene("g1", interpro={"IPR001138", "IPR000001"})  # one TF domain, one non-TF
+    assert cs.transcription_factor_domains(gene) == {"IPR001138"}
+
+    non_tf_gene = _gene("g2", interpro={"IPR000001", "IPR000002"})
+    assert cs.transcription_factor_domains(non_tf_gene) == set()
+
+
+def test_transcription_factor_domain_counts_per_species():
+    species_annotations = {
+        "sx": _FakeSpeciesAnnotations([
+            _gene("g1", interpro={"IPR001138"}),  # Zn2Cys6
+            _gene("g2", interpro={"IPR001356"}),  # Homeobox
+            _gene("g3", interpro={"IPR001138", "IPR001356"}),  # both
+            _gene("g4", interpro={"IPR000001"}),  # not a TF domain
+        ]),
+    }
+    counts = cs.transcription_factor_domain_counts(species_annotations)
+    assert counts["sx"] == {"IPR001138": 2, "IPR001356": 2}
