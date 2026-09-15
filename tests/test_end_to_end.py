@@ -141,6 +141,13 @@ def test_run_end_to_end_with_precomputed_orthogroups(tmp_path):
     assert kegg_pathways["species_b"]["map01100"] == "1"  # ko/map prefixes deduped to one column
     assert kegg_pathways["species_a"].get("map00062", "0") == "0"
 
+    # shared-vs-unique KEGG pathway breakdown
+    assert (comp_dir / "kegg_pathway_overlap.tsv").exists()
+    assert (comp_dir / "kegg_pathway_overlap.svg").exists()
+    overlap_rows = {row["kegg_pathway"]: row for row in _read_tsv(comp_dir / "kegg_pathway_overlap.tsv")}
+    assert overlap_rows["map00062"]["n_species"] == "1"
+    assert overlap_rows["map00062"]["species"] == "species_b"
+
     stats_summary = {row["metric"]: row for row in _read_tsv(comp_dir / "annotation_stats_summary.tsv") if row.get("metric")}
     assert stats_summary["Total genes"]["species_a"] == "3 (100.0%)"
 
@@ -152,6 +159,12 @@ def test_run_end_to_end_with_precomputed_orthogroups(tmp_path):
     go_dir = outdir / "go_enrichment"
     for cls in ("core", "accessory", "singleton"):
         assert (go_dir / f"go_enrichment_{cls}.tsv").exists()
+        assert (go_dir / f"go_enrichment_{cls}.svg").exists()
+
+    report_html = (outdir / "report.html").read_text()
+    assert 'href="comparative/kegg_pathway_overlap.tsv"' in report_html
+    assert 'href="go_enrichment/go_enrichment_core.tsv"' in report_html
+    assert "KEGG pathways shared vs. species-specific" in report_html
 
 
 def test_run_with_no_go_enrichment_skips_it(tmp_path):

@@ -143,3 +143,33 @@ def test_transcription_factor_domain_counts_per_species():
     }
     counts = cs.transcription_factor_domain_counts(species_annotations)
     assert counts["sx"] == {"IPR001138": 2, "IPR001356": 2}
+
+
+def test_category_membership_breakdown_shared_vs_unique():
+    # map1: all 3 species. map2: 2 species. map3: unique to sz.
+    matrix = {
+        "sx": {"map1": 5, "map2": 2},
+        "sy": {"map1": 3, "map2": 1},
+        "sz": {"map1": 1, "map3": 4},
+    }
+    breakdown = cs.category_membership_breakdown(matrix)
+    assert breakdown == {3: 1, 2: 1, 1: 1}
+
+
+def test_category_membership_breakdown_ignores_zero_counts():
+    matrix = {"sx": {"map1": 0, "map2": 3}, "sy": {"map1": 0}}
+    breakdown = cs.category_membership_breakdown(matrix)
+    # map1 has count 0 everywhere -> not counted as "present" anywhere
+    assert breakdown == {1: 1}
+
+
+def test_category_overlap_table_sorted_by_species_count_then_label():
+    matrix = {
+        "sx": {"map1": 5, "map2": 2, "map4": 1},
+        "sy": {"map1": 3},
+        "sz": {"map1": 1, "map2": 1},
+    }
+    table = cs.category_overlap_table(matrix)
+    assert table[0] == ("map1", 3, ["sx", "sy", "sz"])
+    assert table[1] == ("map2", 2, ["sx", "sz"])
+    assert table[2] == ("map4", 1, ["sx"])

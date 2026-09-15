@@ -13,7 +13,8 @@ not an orthology-dependent one.
 from __future__ import annotations
 
 import re
-from typing import Callable, Dict, Iterable, Set
+from collections import defaultdict
+from typing import Callable, Dict, Iterable, List, Set, Tuple
 
 from bagpan.annotations import GeneFunctionalAnnotation
 from bagpan.categories import SpeciesAnnotations
@@ -184,3 +185,34 @@ def kegg_pathway_counts(species_annotations: Dict[str, SpeciesAnnotations]) -> D
     """Per-species gene counts by KEGG pathway (canonical 'mapNNNNN' ids -
     see annotations._split_kegg_pathways for the ko/map dedup)."""
     return _count_by_class(species_annotations, lambda g: g.kegg_pathways)
+
+
+def _label_species_sets(matrix: Dict[str, Dict[str, int]]) -> Dict[str, Set[str]]:
+    label_species: Dict[str, Set[str]] = defaultdict(set)
+    for species, tally in matrix.items():
+        for label, count in tally.items():
+            if count > 0:
+                label_species[label].add(species)
+    return label_species
+
+
+def category_membership_breakdown(matrix: Dict[str, Dict[str, int]]) -> Dict[int, int]:
+    """{n_species_sharing: n_labels} - e.g. {3: 120, 2: 45, 1: 800} means 120
+    labels (KEGG pathways, CAZy families, ...) are present in all 3 species,
+    45 in exactly 2, and 800 are unique to a single species. Answers "how
+    much is shared vs. species-specific" directly, from any of the
+    comparative_stats *_counts() matrices.
+    """
+    breakdown: Dict[int, int] = {}
+    for species in _label_species_sets(matrix).values():
+        breakdown[len(species)] = breakdown.get(len(species), 0) + 1
+    return breakdown
+
+
+def category_overlap_table(matrix: Dict[str, Dict[str, int]]) -> List[Tuple[str, int, List[str]]]:
+    """[(label, n_species, [species, ...])], sorted by n_species descending
+    then label - the per-label detail behind category_membership_breakdown().
+    """
+    rows = [(label, len(species), sorted(species)) for label, species in _label_species_sets(matrix).items()]
+    rows.sort(key=lambda row: (-row[1], row[0]))
+    return rows

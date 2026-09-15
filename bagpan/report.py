@@ -411,6 +411,22 @@ def write_comparative_breakdowns(
         if make_viz:
             (comp_dir / f"{name}.svg").write_text(viz.stacked_bar_svg(matrix))
 
+    # which KEGG pathways are shared across every species vs. species-specific -
+    # answers "which pathways do they share and which don't they" directly,
+    # rather than making the reader infer it from the raw per-pathway counts.
+    kegg_matrix = dict(comparative_stats.kegg_pathway_counts(species_annotations))
+    overlap_table = comparative_stats.category_overlap_table(kegg_matrix)
+    with open(comp_dir / "kegg_pathway_overlap.tsv", "w", newline="") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        w.writerow(["kegg_pathway", "n_species", "species"])
+        for label, n_species, species_list in overlap_table:
+            w.writerow([label, n_species, ",".join(species_list)])
+    if make_viz:
+        breakdown = comparative_stats.category_membership_breakdown(kegg_matrix)
+        (comp_dir / "kegg_pathway_overlap.svg").write_text(
+            viz.membership_breakdown_svg(breakdown, len(species_annotations), title="KEGG pathways shared vs. unique")
+        )
+
     all_labels: List[str] = []
     seen = set()
     for sa in species_annotations.values():
@@ -441,6 +457,7 @@ def write_go_enrichment(
     alpha: float,
     go_dag: Optional[go_enrichment.GoDag],
     go_min_count: int,
+    make_viz: bool,
 ) -> None:
     # go_enrichment operates per protein id (it doesn't know about genes);
     # sa.go_terms is gene-keyed (functional_annotation.tsv is gene-level), so
@@ -453,10 +470,17 @@ def write_go_enrichment(
             terms = species_annotations[species].go_terms.get(gene_id)
             if terms:
                 go_by_protein[protein_id] = terms
-    go_enrichment.run_go_enrichment(
+    results = go_enrichment.run_go_enrichment(
         outdir, orthogroup_set, go_by_protein, locus_prefix_to_species, percent, alpha,
         dag=go_dag, min_population_count=go_min_count,
     )
+    if make_viz:
+        go_dir = outdir / "go_enrichment"
+        names = go_dag.names if go_dag else {}
+        for cls, rows in results.items():
+            (go_dir / f"go_enrichment_{cls.lower()}.svg").write_text(
+                viz.go_enrichment_bar_svg(rows, names=names, alpha=alpha)
+            )
 
 
 def write_manifest(outdir: Path, meta: dict) -> None:
@@ -518,7 +542,7 @@ def run_report(
     if run_go_enrichment_flag:
         write_go_enrichment(
             outdir, orthogroup_set, species_annotations, locus_prefix_to_species, protein_to_gene,
-            percent, alpha, go_dag, go_min_count,
+            percent, alpha, go_dag, go_min_count, make_viz,
         )
         run_meta["go_enrichment_propagated"] = go_dag is not None
 
