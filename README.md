@@ -158,10 +158,11 @@ Key flags: `--percent` (threshold-method cutoff, default 0.5),
 - `functional_enrichment_summary.tsv` - per category: % of Core/Accessory/Singleton with a hit, pairwise Fisher p/BH-q values
 - `per_protein_annotations.tsv` - one row per protein: orthogroup, pangenome category, `gene_id`, `is_representative_transcript`, and all functional annotations
 - `pangenome_accumulation.tsv` / `pangenome_openness.txt` - the rarefaction curve and its power-law fit
-- `go_enrichment/go_enrichment_{core,accessory,singleton}.tsv` - per-class GO term enrichment (Fisher's exact + BH-FDR)
+- `go_enrichment/go_enrichment_{core,accessory,singleton}.tsv` (+ `.svg` - top terms by q-value, red when significant) - per-class GO term enrichment (Fisher's exact + BH-FDR)
 - `species_tree.nwk` - OrthoFinder's rooted species tree (when it ran OrthoFinder itself)
-- `report.html`, `presence_absence_matrix.svg`, `category_enrichment.svg`, `pangenome_accumulation.svg`
-- `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts,transcription_factor_domain_counts,kegg_pathway_counts}.tsv` (+ matching `.svg` stacked-bar charts) - per-species gene counts by class, whole-genome (not per-orthogroup)
+- `report.html`, `presence_absence_matrix.svg`, `category_enrichment.svg`, `pangenome_accumulation.svg` - `report.html` embeds every chart below too (GO, comparative, KEGG overlap), each in its own scrollable section so nothing breaks the page layout at real pangenome scale
+- `comparative/{cazyme_family_counts,merops_class_counts,cog_category_counts,secondary_metabolite_type_counts,transcription_factor_domain_counts,kegg_pathway_counts}.tsv` (+ matching `.svg` stacked-bar charts, capped at the top ~20 classes by count with the rest folded into "Other") - per-species gene counts by class, whole-genome (not per-orthogroup)
+- `comparative/kegg_pathway_overlap.tsv` (+ `.svg`) - which KEGG pathways are shared across every species vs. species-specific, and by how many
 - `comparative/annotation_stats_summary.tsv` - bagRNA's own per-species `annotation_stats.txt` numbers, aligned side by side
 - `bigscape_gene_cluster_families.tsv` - BGC id -> gene-cluster-family, only when `--run-bigscape` resolved a mapping (see caveat below)
 - `dnds/pairwise_dnds.tsv` / `dnds/dnds_summary.tsv` - per-ortholog-pair and per-species-pair dN/dS, only when `--run-dnds` was given (see caveat below)
